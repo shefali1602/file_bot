@@ -3,147 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot UI</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .chat-container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background-color: #f9f9f9; }
-        .message { margin: 10px 0; padding: 10px; border-radius: 5px; }
-        .user { background-color: #d4f1d4; text-align: right; }
-        .bot { background-color: #f1f1f1; text-align: left; }
-        .input-container { margin-top: 20px; display: flex; }
-        .input-container input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        .input-container button { padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    </style>
+    <title>Inquiro - File Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div id="chatbox">
-            <!-- Messages will appear here -->
+    <header class="header">
+        <div class="header-left">
+            <img src="/static/logo-placeholder.png" alt="Company Logo" class="logo">
         </div>
-        <div class="input-container">
-            <input type="text" id="user-input" placeholder="Ask me anything...">
-            <button onclick="sendMessage()">Send</button>
+        <div class="header-center">
+            <h1>Inquiro</h1>
         </div>
-    </div>
+        <div class="header-right">
+            <button class="header-button" onclick="exitChat()">Exit</button>
+            <button class="header-button" onclick="resetChat()">Reset</button>
+        </div>
+    </header>
 
-    <script>
-        const chatbox = document.getElementById("chatbox");
-        const userInput = document.getElementById("user-input");
+    <main class="chat-container">
+        <div id="chatbox" class="chat-box">
+            <!-- Chat messages appear here -->
+        </div>
+    </main>
 
-        let folderIndexed = false;
-        let folderPath = "";  // To store the folder path
-        let filesToSelect = [];  // To store files to be selected from the query
+    <footer class="input-container">
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </footer>
 
-        function addMessage(message, sender) {
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", sender);
-            messageDiv.innerText = message;
-            chatbox.appendChild(messageDiv);
-            chatbox.scrollTop = chatbox.scrollHeight; // Scroll to bottom
-        }
-
-        function sendMessage() {
-            let userMessage = userInput.value.trim();
-            if (userMessage) {
-                addMessage(userMessage, "user");
-                userInput.value = "";
-
-                if (!folderIndexed) {
-                    // Ask for folder path if not indexed yet
-                    indexFolder(userMessage);
-                } else {
-                    // Query files if folder is indexed
-                    queryFiles(userMessage);
-                }
-            }
-        }
-
-        function indexFolder(folderPathInput) {
-            folderPath = folderPathInput;  // Store the folder path
-            fetch('/index_folder', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ folder_path: folderPathInput })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message === "Folder indexed successfully!") {
-                    folderIndexed = true;
-                    addMessage(data.message + " You can now query the files.", "bot");
-                } else {
-                    addMessage(data.message, "bot");
-                }
-            });
-        }
-
-        function queryFiles(query) {
-            fetch('/query_files', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query: query })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.files.length === 0) {
-                    addMessage("No matching files found.", "bot");
-                } else {
-                    let filesList = "Matching files:\n";
-                    filesToSelect = data.files;  // Store the files to be selected
-                    data.files.forEach((file, index) => {
-                        filesList += `${index + 1}. ${file}\n`;
-                    });
-                    addMessage(filesList, "bot");
-                    askForFileSelection();  // After displaying files, ask for selection
-                }
-            });
-        }
-
-        function askForFileSelection() {
-            addMessage("Please select a file by entering its number.", "bot");
-        }
-
-        function handleFileSelection(fileNumber) {
-            fileNumber = parseInt(fileNumber) - 1;  // Convert to zero-based index
-            if (fileNumber >= 0 && fileNumber < filesToSelect.length) {
-                openFile(filesToSelect[fileNumber]);
-            } else {
-                addMessage("Invalid selection. Please enter a valid file number.", "bot");
-            }
-        }
-
-        function openFile(filePath) {
-            fetch('/open_file', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ file_path: filePath })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    addMessage(data.message, "bot");
-                } else {
-                    addMessage("Error opening the file.", "bot");
-                }
-            });
-        }
-
-        // Handle user input after selecting a file number
-        userInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                const userMessage = userInput.value.trim();
-                if (folderIndexed && filesToSelect.length > 0 && !isNaN(userMessage)) {
-                    handleFileSelection(userMessage);  // Process file selection
-                } else {
-                    sendMessage();  // If no selection, continue asking or processing regular input
-                }
-            }
-        });
-    </script>
+    <script src="/static/script.js"></script>
 </body>
 </html>

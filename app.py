@@ -11,8 +11,10 @@ app = Flask(__name__)
 
 SUPPORTED_EXT = [".pdf", ".docx", ".pptx", ".txt", ".xlsx"]
 file_index = {}
-folder_indexed = False  # Track if folder has been indexed
-folder_path = ""  # Store the folder path
+folder_indexed = False
+folder_path = ""
+
+# --- Helper Functions ---
 
 def extract_text(filepath):
     ext = os.path.splitext(filepath)[1].lower()
@@ -52,51 +54,13 @@ def index_files(root_dir):
                 index[filepath] = extract_text(filepath)
     return index
 
-def query_files(query, index):
+def search_query(query, index):
     query = query.lower()
     results = []
     for path, content in index.items():
         if query in content:
             results.append(path)
     return results
-
-@app.route("/")
-def index():
-    return render_template("chatbot.html")
-
-@app.route("/index_folder", methods=["POST"])
-def index_folder():
-    global folder_indexed, folder_path, file_index
-    folder = request.json.get("folder_path").strip()
-    if os.path.isdir(folder):
-        folder_path = folder  # Store folder path
-        print("Indexing files...")
-        file_index = index_files(folder)
-        folder_indexed = True
-        print(f"Indexed {len(file_index)} files.")
-        return jsonify({"message": "Folder indexed successfully!"})
-    return jsonify({"message": "Invalid folder path!"})
-
-@app.route("/query_files", methods=["POST"])
-def query_files_route():
-    query = request.json.get("query")
-    if not folder_indexed:
-        return jsonify({"files": [], "message": "Folder has not been indexed. Please index a folder first."})
-    
-    matches = query_files(query, file_index)
-    return jsonify({"files": matches})
-
-@app.route("/open_file", methods=["POST"])
-def open_file_route():
-    file_path = request.json.get("file_path")
-    try:
-        if os.path.isfile(file_path):
-            open_file(file_path)  # Use OS to open the file
-            return jsonify({"message": f"Opening file: {file_path}"})
-        else:
-            return jsonify({"message": "File not found."})
-    except Exception as e:
-        return jsonify({"message": f"Error opening file: {e}"})
 
 def open_file(filepath):
     try:
@@ -106,6 +70,57 @@ def open_file(filepath):
             subprocess.call(['open' if sys.platform == 'darwin' else 'xdg-open', filepath])
     except Exception as e:
         print(f"Error opening file: {e}")
+
+# --- Routes ---
+
+@app.route("/")
+def home():
+    return render_template("chatbot.html")
+
+@app.route("/message", methods=["POST"])
+def message():
+    global folder_indexed, folder_path, file_index
+
+    data = request.get_json()
+    user_message = data.get("message", "").strip()
+
+    if not user_message:
+        return jsonify({"response": {"type": "text", "text": "Hi 👋! I'm Inquiro. Please type 'index folder <path>' to begin."}})
+
+    # Index folder
+    if user_message.lower().startswith("index folder"):
+        folder_path_input = user_message.replace("index folder", "").strip()
+        if os.path.isdir(folder_path_input):
+            folder_path = folder_path_input
+            file_index = index_files(folder_path)
+            folder_indexed = True
+            return jsonify({"response": {"type": "text", "text": f"Successfully indexed {len(file_index)} files. You can now search!"}})
+        else:
+            return jsonify({"response": {"type": "text", "text": "Invalid folder path."}})
+
+    # Handle search
+    if folder_indexed:
+        matches = search_query(user_message, file_index)
+
+        if matches:
+            file_buttons = [{"filename": os.path.basename(f), "filepath": f} for f in matches]
+            return jsonify({"response": {"type": "files", "files": file_buttons}})
+        else:
+            return jsonify({"response": {"type": "text", "text": "🔍 No matching files found."}})
+
+    return jsonify({"response": {"type": "text", "text": "⚡ Please index a folder first."}})
+
+@app.route("/open_file", methods=["POST"])
+def open_file_route():
+    file_path = request.json.get("file_path")
+    try:
+        if os.path.isfile(file_path):
+            open_file(file_path)
+            return jsonify({"message": f"📂 Opening file: {os.path.basename(file_path)}"})
+        else:
+            return jsonify({"message": "❌ File not found."})
+    except Exception as e:
+        return jsonify({"message": f"Error opening file: {e}"})
 
 if __name__ == "__main__":
     app.run(debug=True)
