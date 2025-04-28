@@ -15,6 +15,22 @@ function addMessage(data, sender = "bot") {
             button.onclick = () => openFile(file.filepath);
             messageDiv.appendChild(button);
         });
+    } else if (data.type === "file_list") {
+        const title = document.createElement("div");
+        title.innerHTML = `Found ${data.count} files:<br><br>`;
+        messageDiv.appendChild(title);
+
+        data.files.forEach((file, index) => {
+            const link = document.createElement("a");
+            link.href = "#";
+            link.textContent = `${index + 1}. ${file.filename}`;
+            link.style.display = "block";
+            link.onclick = (e) => {
+                e.preventDefault();
+                openFile(file.filepath);
+            };
+            messageDiv.appendChild(link);
+        });
     }
 
     chatbox.appendChild(messageDiv);
@@ -36,10 +52,6 @@ function sendMessage() {
     .then(response => response.json())
     .then(data => {
         addMessage(data.response, "bot");
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        addMessage({type: "text", text: "Oops! Something went wrong."}, "bot");
     });
 }
 

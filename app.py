@@ -14,8 +14,6 @@ file_index = {}
 folder_indexed = False
 folder_path = ""
 
-# --- Helper Functions ---
-
 def extract_text(filepath):
     ext = os.path.splitext(filepath)[1].lower()
     text = ""
@@ -64,14 +62,12 @@ def search_query(query, index):
 
 def open_file(filepath):
     try:
-        if os.name == 'nt':  # Windows
+        if os.name == 'nt':
             os.startfile(filepath)
-        elif os.name == 'posix':  # macOS/Linux
+        elif os.name == 'posix':
             subprocess.call(['open' if sys.platform == 'darwin' else 'xdg-open', filepath])
     except Exception as e:
         print(f"Error opening file: {e}")
-
-# --- Routes ---
 
 @app.route("/")
 def home():
@@ -85,20 +81,22 @@ def message():
     user_message = data.get("message", "").strip()
 
     if not user_message:
-        return jsonify({"response": {"type": "text", "text": "Hi 👋! I'm Inquiro. Please type 'index folder <path>' to begin."}})
+        return jsonify({"response": {"type": "text", "text": "Hi! I'm Inquiro. Please provide a folder path to begin."}})
 
-    # Index folder
-    if user_message.lower().startswith("index folder"):
-        folder_path_input = user_message.replace("index folder", "").strip()
-        if os.path.isdir(folder_path_input):
-            folder_path = folder_path_input
-            file_index = index_files(folder_path)
-            folder_indexed = True
-            return jsonify({"response": {"type": "text", "text": f"Successfully indexed {len(file_index)} files. You can now search!"}})
-        else:
-            return jsonify({"response": {"type": "text", "text": "Invalid folder path."}})
+    if os.path.isdir(user_message):
+        folder_path = user_message
+        file_index = index_files(folder_path)
+        folder_indexed = True
 
-    # Handle search
+        file_list = [{"filename": os.path.basename(f), "filepath": f} for f in file_index.keys()]
+        return jsonify({
+            "response": {
+                "type": "file_list",
+                "files": file_list,
+                "count": len(file_list)
+            }
+        })
+
     if folder_indexed:
         matches = search_query(user_message, file_index)
 
@@ -106,9 +104,9 @@ def message():
             file_buttons = [{"filename": os.path.basename(f), "filepath": f} for f in matches]
             return jsonify({"response": {"type": "files", "files": file_buttons}})
         else:
-            return jsonify({"response": {"type": "text", "text": "🔍 No matching files found."}})
+            return jsonify({"response": {"type": "text", "text": "No matching files found."}})
 
-    return jsonify({"response": {"type": "text", "text": "⚡ Please index a folder first."}})
+    return jsonify({"response": {"type": "text", "text": "Please provide a valid folder path first."}})
 
 @app.route("/open_file", methods=["POST"])
 def open_file_route():
@@ -116,9 +114,10 @@ def open_file_route():
     try:
         if os.path.isfile(file_path):
             open_file(file_path)
-            return jsonify({"message": f"📂 Opening file: {os.path.basename(file_path)}"})
+            return jsonify({"message": f"Opening file: {os.path.basename(file_path)}"})
         else:
-            return jsonify({"message": "❌ File not found."})
+            return jsonify({"message": ""
+            "File not found."})
     except Exception as e:
         return jsonify({"message": f"Error opening file: {e}"})
 
