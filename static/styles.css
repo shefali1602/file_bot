@@ -29,10 +29,15 @@ body {
     align-items: center;
 }
 
-.header-center {
-    flex: 1;
-    justify-content: center;
+.header-center h1 {
+    font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: #4b5563; /* Subtle modern indigo */
+    letter-spacing: 0.5px;
+    margin: 0;
 }
+
 
 .logo {
     height: 40px;
@@ -144,4 +149,10 @@ a:hover {
     width: 180px;
     height: 18px;
     object-fit: contain;
+}
+.timestamp {
+    font-size: 11px;
+    color: #666;
+    margin-top: 6px;
+    text-align: right;
 }
